@@ -1,0 +1,9 @@
+server:
+  address: "localhost:8080"
+  nonceTTL: "30s"
+
+pow:
+  difficulty: 20
+
+quotes:
+  file_path: "configs/quotes.txt"
