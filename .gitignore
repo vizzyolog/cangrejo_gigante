@@ -24,6 +24,9 @@ go.work
 # Dependency directories
 /vendor/
 
+# Binary files
+/bin/
+
 # Generated
 generated/
 
@@ -47,7 +50,6 @@ Thumbs.db
 # Profiler files
 *.prof
 
-# Exclude the main binary file
-/wlb_bot
+
 
 

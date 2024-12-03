@@ -57,8 +57,8 @@ This project implements a client-server application over TCP, designed to solve 
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/word-of-wisdom.git
-   cd word-of-wisdom
+   git clone https://github.com/vizzyolog/cangrejo_gigante.git
+   cd cangrejo_gigante
 
 2.	Install dependencies (if needed):
     
@@ -68,8 +68,8 @@ This project implements a client-server application over TCP, designed to solve 
 3.	Build the server and client:
     
     ```bash
-   go build -o server cmd/server/main.go
-   go build -o client cmd/client/main.go
+   go build -o ./bin/server cmd/server/main.go
+   go build -o ./bin/client cmd/client/main.go
    
 4.	Run the server:
     
