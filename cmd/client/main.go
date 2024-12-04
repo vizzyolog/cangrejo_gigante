@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"cangrejo_gigante/internal/app/client"
 	"cangrejo_gigante/internal/config"
@@ -17,7 +16,14 @@ import (
 func main() {
 	log := logger.New()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Errorf("Failed to load config: %v", err)
+
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Client.Timeout)
 	defer cancel()
 
 	stopped := make(chan struct{})
@@ -31,21 +37,16 @@ func main() {
 		cancel()
 	}()
 
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		log.Errorf("Failed to load config: %v", err)
-		return
-	}
-
 	connManager := network.NewConnectionManager(cfg.Server.Address)
 	powResolver := pow.NewPoWResolver(cfg.PoW.Difficulty)
 
-	app := client.NewClient(connManager, powResolver, ctx, log)
+	app := client.NewClient(connManager, powResolver, log)
 
 	go func() {
-		if err := app.Run(); err != nil {
+		if err := app.Run(ctx); err != nil {
 			log.Errorf("Client failed: %v", err)
 		}
+
 		close(stopped)
 	}()
 

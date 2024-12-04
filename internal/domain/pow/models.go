@@ -9,3 +9,5 @@ type Solution struct {
 	Nonce    string
 	Response string
 }
+
+const ExpectedDataPartsCount = 2

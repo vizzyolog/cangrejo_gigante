@@ -7,61 +7,74 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type logrusAdapter struct {
+const skipFrames = 2
+
+type LogrusAdapter struct {
 	entry *logrus.Entry
 }
 
-func New() Logger {
+func New() *LogrusAdapter {
 	baseLogger := logrus.New()
-	baseLogger.SetFormatter(&logrus.JSONFormatter{})
+	baseLogger.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat:   "",
+		DisableTimestamp:  false,
+		DisableHTMLEscape: false,
+		DataKey:           "",
+		FieldMap:          nil,
+		CallerPrettyfier:  nil,
+		PrettyPrint:       false,
+	})
 	baseLogger.SetLevel(logrus.DebugLevel)
 
-	return &logrusAdapter{
+	return &LogrusAdapter{
 		entry: logrus.NewEntry(baseLogger),
 	}
 }
 
-func (l *logrusAdapter) Info(args ...interface{}) {
-	l.entry.WithField("caller", getCaller(2)).Info(args...)
+func (l *LogrusAdapter) Info(args ...interface{}) {
+	l.entry.WithField("caller", getCaller(skipFrames)).Info(args...)
 }
 
-func (l *logrusAdapter) Infof(format string, args ...interface{}) {
-	l.entry.WithField("caller", getCaller(2)).Infof(format, args...)
+func (l *LogrusAdapter) Infof(format string, args ...interface{}) {
+	l.entry.WithField("caller", getCaller(skipFrames)).Infof(format, args...)
 }
 
-func (l *logrusAdapter) Warn(args ...interface{}) {
-	l.entry.WithField("caller", getCaller(2)).Warn(args...)
+func (l *LogrusAdapter) Warn(args ...interface{}) {
+	l.entry.WithField("caller", getCaller(skipFrames)).Warn(args...)
 }
 
-func (l *logrusAdapter) Warnf(format string, args ...interface{}) {
-	l.entry.WithField("caller", getCaller(2)).Warnf(format, args...)
+func (l *LogrusAdapter) Warnf(format string, args ...interface{}) {
+	l.entry.WithField("caller", getCaller(skipFrames)).Warnf(format, args...)
 }
 
-func (l *logrusAdapter) Error(args ...interface{}) {
-	l.entry.WithField("caller", getCaller(2)).Error(args...)
+func (l *LogrusAdapter) Error(args ...interface{}) {
+	l.entry.WithField("caller", getCaller(skipFrames)).Error(args...)
 }
 
-func (l *logrusAdapter) Errorf(format string, args ...interface{}) {
-	l.entry.WithField("caller", getCaller(2)).Errorf(format, args...)
+func (l *LogrusAdapter) Errorf(format string, args ...interface{}) {
+	l.entry.WithField("caller", getCaller(skipFrames)).Errorf(format, args...)
 }
 
-func (l *logrusAdapter) WithField(key string, value interface{}) Logger {
-	return &logrusAdapter{
+func (l *LogrusAdapter) WithField(key string, value interface{}) *LogrusAdapter {
+	return &LogrusAdapter{
 		entry: l.entry.WithField(key, value),
 	}
 }
 
-func (l *logrusAdapter) WithFields(fields map[string]interface{}) Logger {
-	return &logrusAdapter{
+func (l *LogrusAdapter) WithFields(fields map[string]interface{}) *LogrusAdapter {
+	return &LogrusAdapter{
 		entry: l.entry.WithFields(fields),
 	}
 }
 
+//nolint:unparam
 func getCaller(skip int) string {
 	pc, file, line, ok := runtime.Caller(skip)
 	if !ok {
 		return "unknown"
 	}
+
 	funcName := runtime.FuncForPC(pc).Name()
-	return file + ":" + funcName + ":" + fmt.Sprintf("%d", line)
+
+	return fmt.Sprintf("%s:%s:%d", file, funcName, line)
 }

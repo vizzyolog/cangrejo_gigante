@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"cangrejo_gigante/internal/infrastructure/network"
@@ -11,16 +12,22 @@ import (
 type Server struct {
 	powService       PowService
 	quoteService     QuoteService
-	nonceStore       *nonceStore
+	nonceStore       *NonceStore
 	connectionServer network.ConnectionServer
 	log              logger.Logger
 }
 
-func New(powService PowService, quoteService QuoteService, nonceTTL time.Duration, secret string, connSrv network.ConnectionServer, logger logger.Logger) *Server {
+func New(
+	powService PowService,
+	quoteService QuoteService,
+	nonceTTL time.Duration,
+	secret string,
+	connSrv network.ConnectionServer,
+	logger logger.Logger) *Server {
 	return &Server{
 		powService:       powService,
 		quoteService:     quoteService,
-		nonceStore:       newNonceStore(nonceTTL, []byte(secret)),
+		nonceStore:       NewNonceStore(nonceTTL, []byte(secret)),
 		connectionServer: connSrv,
 		log:              logger,
 	}
@@ -33,5 +40,10 @@ func (s *Server) Run(ctx context.Context) error {
 	}()
 
 	s.log.Info("Server starting...")
-	return s.connectionServer.ListenAndServe()
+
+	if err := s.connectionServer.ListenAndServe(); err != nil {
+		return fmt.Errorf("failed to start server: %w", err)
+	}
+
+	return nil
 }

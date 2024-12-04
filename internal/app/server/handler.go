@@ -2,11 +2,13 @@ package server
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"strings"
 
+	"cangrejo_gigante/internal/domain/pow"
 	"cangrejo_gigante/internal/logger"
 )
 
@@ -24,6 +26,9 @@ func NewHandler(powService PowService, quoteService QuoteService, log logger.Log
 	}
 }
 
+var ErrInvalidSolutionFormat = errors.New("invalid solution format")
+var ErrWrongPow = errors.New("wrong PoW")
+
 func (h *Handler) Handle(conn net.Conn) {
 	defer conn.Close()
 
@@ -31,65 +36,116 @@ func (h *Handler) Handle(conn net.Conn) {
 
 	nonce, err := h.powService.GenerateChallenge()
 	if err != nil {
-		h.log.Errorf("Failed to generate challenge: %v", err)
-		if _, err := fmt.Fprintf(conn, "Server error\n"); err != nil {
-			h.log.Errorf("Failed to send error to client: %v", err)
-		}
+		h.sendError(conn, "Server error", err)
 
 		return
 	}
 
 	h.log.Infof("Sending challenge to client: %s:%d", nonce.Nonce, nonce.Difficulty)
 
-	_, err = fmt.Fprintf(conn, "%s:%d\n", nonce.Nonce, nonce.Difficulty)
+	if err := h.sendChallenge(conn, nonce); err != nil {
+		h.sendError(conn, "Failed to send challenge", err)
+
+		return
+	}
+
+	data, err := h.receiveDataFromClient(conn)
 	if err != nil {
-		h.log.Errorf("Failed to send challenge: %v", err)
 		return
 	}
 
-	reader := bufio.NewReader(conn)
-	data, err := reader.ReadString('\n')
+	clientNonce, clientSolution, err := parseClientNonceAndSolutionFromData(data)
 	if err != nil {
-		if err == io.EOF {
-			h.log.Warnf("Client closed connection prematurely.")
-			return
-		}
-		h.log.Errorf("Failed to read solution: %v", err)
+		h.sendError(conn, "Invalid solution format", nil)
+
 		return
 	}
 
-	data = strings.TrimSpace(data)
-	h.log.Infof("Received solution from client: %s", data)
-
-	parts := strings.Split(data, ":")
-	if len(parts) != 2 {
-		h.log.Warnf("Invalid solution format from client: %s", data)
-		fmt.Fprintf(conn, "Invalid solution format\n")
-		return
-	}
-
-	clientNonce, clientSolution := parts[0], parts[1]
-
-	if clientNonce != nonce.Nonce {
-		h.log.Warnf("Invalid nonce from client: expected '%s', got '%s'", nonce.Nonce, clientNonce)
-		fmt.Fprintf(conn, "Invalid nonce\n")
-		return
-	}
-
-	if !h.powService.VerifySolution(clientNonce, clientSolution) {
-		h.log.Warnf("Invalid solution from client. Nonce='%s', Solution='%s'", clientNonce, clientSolution)
-		fmt.Fprintf(conn, "Wrong PoW\n")
+	if err := h.verifySolution(conn, nonce, clientNonce, clientSolution); err != nil {
 		return
 	}
 
 	quote := h.quoteService.GetRandomQuote()
+
 	h.log.Infof("Sending quote to client: %s", quote)
 
-	_, err = fmt.Fprintf(conn, "%s\n", quote)
-	if err != nil {
-		h.log.Errorf("Failed to send quote: %v", err)
+	if err := h.sendQuote(conn, quote); err != nil {
+		h.sendError(conn, "Failed to send quote", err)
+
 		return
 	}
 
 	h.log.Info("Quote sent successfully, connection closing.")
+}
+
+func (h *Handler) sendError(conn net.Conn, message string, err error) {
+	if err != nil {
+		h.log.Errorf("%s: %v", message, err)
+	} else {
+		h.log.Warn(message)
+	}
+
+	_, _ = fmt.Fprintf(conn, "%s\n", message)
+}
+
+func (h *Handler) sendChallenge(conn net.Conn, nonce *pow.Challenge) error {
+	_, err := fmt.Fprintf(conn, "%s:%d\n", nonce.Nonce, nonce.Difficulty)
+
+	return fmt.Errorf("send Challenge: %w", err)
+}
+
+func (h *Handler) receiveDataFromClient(conn net.Conn) (string, error) {
+	reader := bufio.NewReader(conn)
+
+	data, err := reader.ReadString('\n')
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			h.log.Warnf("Client closed connection prematurely.")
+
+			return "", nil
+		}
+
+		h.log.Errorf("Failed to read solution: %v", err)
+
+		return "", fmt.Errorf("failed to reciveDataFromClient: %w", err)
+	}
+
+	return strings.TrimSpace(data), nil
+}
+
+func (h *Handler) verifySolution(
+	conn net.Conn,
+	nonce *pow.Challenge,
+	clientNonce,
+	clientSolution string) error {
+	if clientNonce != nonce.Nonce {
+		h.sendError(conn, "Invalid nonce", nil)
+
+		return ErrInvalidNonce
+	}
+
+	if !h.powService.VerifySolution(clientNonce, clientSolution) {
+		h.sendError(conn, "Wrong PoW", nil)
+
+		return ErrWrongPow
+	}
+
+	return nil
+}
+
+func (h *Handler) sendQuote(conn net.Conn, quote string) error {
+	_, err := fmt.Fprintf(conn, "%s\n", quote)
+
+	return fmt.Errorf("failed to send quote: %w", err)
+}
+
+func parseClientNonceAndSolutionFromData(data string) (string, string, error) {
+	parts := strings.Split(data, ":")
+	if len(parts) != pow.ExpectedDataPartsCount {
+		return "", "", ErrInvalidSolutionFormat
+	}
+
+	clientNonce, clientSolution := parts[0], parts[1]
+
+	return clientNonce, clientSolution, nil
 }

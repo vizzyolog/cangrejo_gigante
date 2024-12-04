@@ -3,10 +3,9 @@ package pow
 import (
 	"crypto/sha256"
 	"fmt"
-	"math/rand"
-	"time"
 
 	"cangrejo_gigante/internal/logger"
+	"cangrejo_gigante/internal/utils"
 )
 
 type Service struct {
@@ -22,8 +21,12 @@ func New(difficulty int, logger logger.Logger) *Service {
 }
 
 func (s *Service) GenerateChallenge() (*Challenge, error) {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	nonce := fmt.Sprintf("%x", r.Int63())
+	r, err := utils.GenerateCryptoRandomInt()
+	if err != nil {
+		return &Challenge{}, fmt.Errorf("%w: failed to generate Challenge, crypto random ", err)
+	}
+
+	nonce := fmt.Sprintf("%x", r)
 
 	return &Challenge{
 		Nonce:      nonce,
@@ -34,7 +37,7 @@ func (s *Service) GenerateChallenge() (*Challenge, error) {
 func (s *Service) VerifySolution(nonce, solution string) bool {
 	data := fmt.Sprintf("%s%s", nonce, solution)
 	hash := sha256.Sum256([]byte(data))
-	leadingZeros := countLeadingZeros(hash[:])
+	leadingZeros := utils.CountLeadingZeros(hash[:])
 
 	s.logger.Infof("Verifying solution: Nonce='%s', Solution='%s', Hash='%x', LeadingZeros=%d, Difficulty=%d\n",
 		nonce, solution, hash, leadingZeros, s.difficulty)

@@ -4,22 +4,26 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"math/rand"
+
+	"cangrejo_gigante/internal/utils"
 )
 
 func SolveChallenge(ctx context.Context, challenge *Challenge) (*Solution, error) {
-	var solution string
-
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("context canceled: %w", ctx.Err())
 		default:
-			solution = fmt.Sprintf("%x", rand.Int63())
+			randomInt, err := utils.GenerateCryptoRandomInt()
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate random number: %w", err)
+			}
+
+			solution := fmt.Sprintf("%x", randomInt)
 			data := fmt.Sprintf("%s%s", challenge.Nonce, solution)
 			hash := sha256.Sum256([]byte(data))
 
-			if countLeadingZeros(hash[:]) >= challenge.Difficulty {
+			if utils.CountLeadingZeros(hash[:]) >= challenge.Difficulty {
 				return &Solution{
 					Nonce:    challenge.Nonce,
 					Response: solution,
@@ -27,18 +31,4 @@ func SolveChallenge(ctx context.Context, challenge *Challenge) (*Solution, error
 			}
 		}
 	}
-}
-
-func countLeadingZeros(hash []byte) int {
-	zeros := 0
-	for _, b := range hash {
-		for i := 7; i >= 0; i-- {
-			if (b>>i)&1 == 0 {
-				zeros++
-			} else {
-				return zeros
-			}
-		}
-	}
-	return zeros
 }

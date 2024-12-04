@@ -7,5 +7,5 @@ type Logger interface {
 	Warnf(format string, args ...interface{})
 	Error(args ...interface{})
 	Errorf(format string, args ...interface{})
-	WithField(key string, value interface{}) Logger
+	WithField(key string, value interface{}) *LogrusAdapter
 }

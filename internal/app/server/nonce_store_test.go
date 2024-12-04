@@ -1,37 +1,45 @@
-package server
+package server_test
 
 import (
 	"errors"
 	"testing"
 	"time"
+
+	"cangrejo_gigante/internal/app/server"
 )
 
 func TestNonceStore(t *testing.T) {
-	store := newNonceStore(1*time.Second, []byte("test-key"))
+	t.Parallel()
 
-	nonce, signature, err := store.generateSignedNonce()
+	store := server.NewNonceStore(1*time.Second, []byte("test-key"))
+
+	nonce, signature, err := store.GenerateSignedNonce()
+
 	if err != nil {
 		t.Fatalf("Failed to generate nonce: %v", err)
 	}
 
-	if err := store.validateNonce(nonce, signature); err != nil {
+	if err := store.ValidateNonce(nonce, signature); err != nil {
 		t.Errorf("Nonce validation failed: %v", err)
 	}
 
-	if err := store.validateNonce(nonce, signature); err == nil {
+	if err := store.ValidateNonce(nonce, signature); err == nil {
 		t.Errorf("Expected error for reused nonce, got nil")
 	}
 
 	time.Sleep(2 * time.Second)
-	if err := store.validateNonce(nonce, signature); err == nil {
+
+	if err := store.ValidateNonce(nonce, signature); err == nil {
 		t.Errorf("Expected error for expired nonce, got nil")
 	}
 }
 
 func TestGenerateSignedNonce(t *testing.T) {
-	ns := newNonceStore(5*time.Second, []byte("test-key"))
+	t.Parallel()
 
-	nonce, signature, err := ns.generateSignedNonce()
+	nonceStore := server.NewNonceStore(5*time.Second, []byte("test-key"))
+
+	nonce, signature, err := nonceStore.GenerateSignedNonce()
 	if err != nil {
 		t.Fatalf("Failed to generate nonce: %v", err)
 	}
@@ -42,34 +50,38 @@ func TestGenerateSignedNonce(t *testing.T) {
 }
 
 func TestReuseNonce(t *testing.T) {
-	ns := newNonceStore(5*time.Second, []byte("test-key"))
+	t.Parallel()
 
-	nonce, signature, err := ns.generateSignedNonce()
+	nonceStore := server.NewNonceStore(5*time.Second, []byte("test-key"))
+
+	nonce, signature, err := nonceStore.GenerateSignedNonce()
 	if err != nil {
 		t.Fatalf("Failed to generate nonce: %v", err)
 	}
 
-	err = ns.validateNonce(nonce, signature)
+	err = nonceStore.ValidateNonce(nonce, signature)
 	if err != nil {
 		t.Errorf("Nonce validation failed: %v", err)
 	}
 
-	err = ns.validateNonce(nonce, signature)
-	if !errors.Is(err, ErrInvalidNonce) {
+	err = nonceStore.ValidateNonce(nonce, signature)
+	if !errors.Is(err, server.ErrInvalidNonce) {
 		t.Errorf("Expected nonce reuse error, got: %v", err)
 	}
 }
 
 func TestInvalidSignature(t *testing.T) {
-	ns := newNonceStore(5*time.Second, []byte("test-key"))
+	t.Parallel()
 
-	nonce, _, err := ns.generateSignedNonce()
+	nonceStore := server.NewNonceStore(5*time.Second, []byte("test-key"))
+
+	nonce, _, err := nonceStore.GenerateSignedNonce()
 	if err != nil {
 		t.Fatalf("Failed to generate nonce: %v", err)
 	}
 
-	err = ns.validateNonce(nonce, "invalid-signature")
-	if !errors.Is(err, ErrInvalidSignature) {
+	err = nonceStore.ValidateNonce(nonce, "invalid-signature")
+	if !errors.Is(err, server.ErrInvalidSignature) {
 		t.Errorf("Expected invalid signature error, got: %v", err)
 	}
 }

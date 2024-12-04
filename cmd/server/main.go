@@ -17,12 +17,16 @@ func main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Errorf("Failed to Load config :%v", err)
+
 		return
 	}
+
 	powService := pow.New(cfg.PoW.Difficulty, log)
+
 	quoteService, err := quote.New(cfg.Quotes.FilePath)
 	if err != nil {
 		log.Errorf("Failed to create quoteService %v", err)
+
 		return
 	}
 
@@ -34,6 +38,7 @@ func main() {
 	srv := server.New(powService, quoteService, cfg.Server.NonceTTL, cfg.Server.SecretKey, tcpServer, log)
 	if err := srv.Run(ctx); err != nil {
 		log.Errorf("Failed to start server: %v", err)
+
 		return
 	}
 }

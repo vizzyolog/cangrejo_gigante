@@ -4,28 +4,32 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
-type PoWResolver struct {
+type Resolver struct {
 	Difficulty int
 }
 
-func NewPoWResolver(difficulty int) *PoWResolver {
-	return &PoWResolver{Difficulty: difficulty}
+func NewPoWResolver(difficulty int) *Resolver {
+	return &Resolver{Difficulty: difficulty}
 }
 
-func (pr *PoWResolver) Solve(nonce string) (string, error) {
-	for i := 0; ; i++ {
-		data := fmt.Sprintf("%s%d", nonce, i)
+func (pr *Resolver) Solve(nonce string) (string, error) {
+	for attempt := 0; ; attempt++ {
+		data := fmt.Sprintf("%s%d", nonce, attempt)
+
 		hash := sha256.Sum256([]byte(data))
+
 		if pr.isValidHash(hash[:]) {
-			return fmt.Sprintf("%d", i), nil
+			return strconv.Itoa(attempt), nil
 		}
 	}
 }
 
-func (pr *PoWResolver) isValidHash(hash []byte) bool {
+func (pr *Resolver) isValidHash(hash []byte) bool {
 	hashHex := hex.EncodeToString(hash)
+
 	return strings.HasPrefix(hashHex, strings.Repeat("0", pr.Difficulty))
 }

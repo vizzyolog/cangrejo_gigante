@@ -6,9 +6,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/rand"
 	"sync"
 	"time"
+
+	"cangrejo_gigante/internal/utils"
 )
 
 var (
@@ -17,38 +18,45 @@ var (
 	ErrInvalidSignature = errors.New("invalid nonce signature")
 )
 
-type nonceStore struct {
+type NonceStore struct {
 	store     map[string]time.Time
 	ttl       time.Duration
 	secretKey []byte
 	mu        sync.Mutex
 }
 
-func newNonceStore(ttl time.Duration, secretKey []byte) *nonceStore {
-	return &nonceStore{
+func NewNonceStore(ttl time.Duration, secretKey []byte) *NonceStore {
+	return &NonceStore{
 		store:     make(map[string]time.Time),
 		ttl:       ttl,
 		secretKey: secretKey,
+		mu:        sync.Mutex{},
 	}
 }
 
-func (ns *nonceStore) generateSignedNonce() (string, string, error) {
+func (ns *NonceStore) GenerateSignedNonce() (string, string, error) {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
-	nonce := fmt.Sprintf("%x", rand.Int63())
+	randInt, err := utils.GenerateCryptoRandomInt()
+	if err != nil {
+		return "", "", fmt.Errorf("%w: failed to generate SignedNonce, crypto random ", err)
+	}
+
+	nonce := fmt.Sprintf("%x", randInt)
 	ns.store[nonce] = time.Now()
 
 	mac := hmac.New(sha256.New, ns.secretKey)
 	if _, err := mac.Write([]byte(nonce)); err != nil {
 		return "", "", fmt.Errorf("%w: failed to compute HMAC", ErrInvalidSignature)
 	}
+
 	signature := hex.EncodeToString(mac.Sum(nil))
 
 	return nonce, signature, nil
 }
 
-func (ns *nonceStore) validateNonce(nonce, signature string) error {
+func (ns *NonceStore) ValidateNonce(nonce, signature string) error {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
@@ -59,16 +67,19 @@ func (ns *nonceStore) validateNonce(nonce, signature string) error {
 
 	if time.Since(timestamp) > ns.ttl {
 		delete(ns.store, nonce)
+
 		return ErrNonceExpired
 	}
 
 	mac := hmac.New(sha256.New, ns.secretKey)
 	mac.Write([]byte(nonce))
+
 	expectedSignature := hex.EncodeToString(mac.Sum(nil))
 	if !hmac.Equal([]byte(expectedSignature), []byte(signature)) {
 		return ErrInvalidSignature
 	}
 
 	delete(ns.store, nonce)
+
 	return nil
 }
