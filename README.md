@@ -73,12 +73,10 @@ This project implements a client-server application over TCP, designed to solve 
    
 4.	Run the server
 
-    ```bash
    ./server
 
 5. Run the client:
 
-    ```bash
    ./client
 
 ### Configuration
