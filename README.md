@@ -71,18 +71,18 @@ This project implements a client-server application over TCP, designed to solve 
     go build -o ./bin/server cmd/server/main.go
     go build -o ./bin/client cmd/client/main.go
    
-4.	Run the server
+4. Run the server
 
    ```bash
    ./server
+
 
 5. Run the client:
 
    ```bash 
    ./client
-   
 
-#
+	
 ### Configuration
 The application uses a YAML configuration file located at configs/config.yaml:
     
