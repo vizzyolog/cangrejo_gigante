@@ -80,7 +80,9 @@ This project implements a client-server application over TCP, designed to solve 
 
    ```bash 
    ./client
+   
 
+#
 ### Configuration
 The application uses a YAML configuration file located at configs/config.yaml:
     
