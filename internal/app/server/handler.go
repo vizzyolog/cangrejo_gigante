@@ -79,19 +79,28 @@ func (h *Handler) Handle(conn net.Conn) {
 }
 
 func (h *Handler) sendError(conn net.Conn, message string, err error) {
+	h.log.Info("message: ", message)
+	h.log.Info("error: ", err)
+
 	if err != nil {
 		h.log.Errorf("%s: %v", message, err)
 	} else {
 		h.log.Warn(message)
 	}
 
-	_, _ = fmt.Fprintf(conn, "%s\n", message)
+	_, writeErr := fmt.Fprintf(conn, "%s\n", message)
+	if writeErr != nil {
+		h.log.Errorf("Failed to send error message to client: %v", writeErr)
+	}
 }
 
 func (h *Handler) sendChallenge(conn net.Conn, nonce *pow.Challenge) error {
 	_, err := fmt.Fprintf(conn, "%s:%d\n", nonce.Nonce, nonce.Difficulty)
+	if err != nil {
+		return fmt.Errorf("failed to send challenge: %w", err)
+	}
 
-	return fmt.Errorf("send Challenge: %w", err)
+	return nil
 }
 
 func (h *Handler) receiveDataFromClient(conn net.Conn) (string, error) {
@@ -135,8 +144,10 @@ func (h *Handler) verifySolution(
 
 func (h *Handler) sendQuote(conn net.Conn, quote string) error {
 	_, err := fmt.Fprintf(conn, "%s\n", quote)
-
-	return fmt.Errorf("failed to send quote: %w", err)
+	if err != nil {
+		fmt.Errorf("failed to send quote: %w", err)
+	}
+	return nil
 }
 
 func parseClientNonceAndSolutionFromData(data string) (string, string, error) {

@@ -22,7 +22,7 @@ func New() *LogrusAdapter {
 		DataKey:           "",
 		FieldMap:          nil,
 		CallerPrettyfier:  nil,
-		PrettyPrint:       false,
+		PrettyPrint:       true,
 	})
 	baseLogger.SetLevel(logrus.DebugLevel)
 
@@ -32,19 +32,19 @@ func New() *LogrusAdapter {
 }
 
 func (l *LogrusAdapter) Info(args ...interface{}) {
-	l.entry.WithField("caller", getCaller(skipFrames)).Info(args...)
+	l.entry.Info(args...)
 }
 
 func (l *LogrusAdapter) Infof(format string, args ...interface{}) {
-	l.entry.WithField("caller", getCaller(skipFrames)).Infof(format, args...)
+	l.entry.Infof(format, args...)
 }
 
 func (l *LogrusAdapter) Warn(args ...interface{}) {
-	l.entry.WithField("caller", getCaller(skipFrames)).Warn(args...)
+	l.entry.Warn(args...)
 }
 
 func (l *LogrusAdapter) Warnf(format string, args ...interface{}) {
-	l.entry.WithField("caller", getCaller(skipFrames)).Warnf(format, args...)
+	l.entry.Warnf(format, args...)
 }
 
 func (l *LogrusAdapter) Error(args ...interface{}) {

@@ -40,8 +40,11 @@ func (cm *ConnectionManager) Close() error {
 
 func (cm *ConnectionManager) Send(data string) error {
 	_, err := fmt.Fprintf(cm.conn, "%s\n", data)
+	if err != nil {
+		return fmt.Errorf("failed to send data: %w", err)
+	}
 
-	return fmt.Errorf("failed to send data: %w", err)
+	return nil
 }
 
 func (cm *ConnectionManager) Receive() (string, error) {
