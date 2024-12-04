@@ -76,7 +76,6 @@ This project implements a client-server application over TCP, designed to solve 
     ```bash
    ./server
 
-
 5. Run the client:
 
     ```bash
