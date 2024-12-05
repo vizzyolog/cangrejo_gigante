@@ -32,10 +32,11 @@ func main() {
 
 	ctx := context.Background()
 
-	handler := server.NewHandler(powService, quoteService, log)
+	nonceStore := server.NewNonceStore(cfg.Server.NonceTTL)
+	handler := server.NewHandler(powService, quoteService, nonceStore, log)
 	tcpServer := network.NewTCPServer(cfg.Server.Address, handler.Handle)
 
-	srv := server.New(powService, quoteService, cfg.Server.NonceTTL, cfg.Server.SecretKey, tcpServer, log)
+	srv := server.New(powService, quoteService, tcpServer, log)
 	if err := srv.Run(ctx); err != nil {
 		log.Errorf("Failed to start server: %v", err)
 

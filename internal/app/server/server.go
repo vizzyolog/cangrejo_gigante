@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"cangrejo_gigante/internal/infrastructure/network"
 	"cangrejo_gigante/internal/logger"
@@ -12,7 +11,6 @@ import (
 type Server struct {
 	powService       PowService
 	quoteService     QuoteService
-	nonceStore       *NonceStore
 	connectionServer network.ConnectionServer
 	log              logger.Logger
 }
@@ -20,14 +18,11 @@ type Server struct {
 func New(
 	powService PowService,
 	quoteService QuoteService,
-	nonceTTL time.Duration,
-	secret string,
 	connSrv network.ConnectionServer,
 	logger logger.Logger) *Server {
 	return &Server{
 		powService:       powService,
 		quoteService:     quoteService,
-		nonceStore:       NewNonceStore(nonceTTL, []byte(secret)),
 		connectionServer: connSrv,
 		log:              logger,
 	}

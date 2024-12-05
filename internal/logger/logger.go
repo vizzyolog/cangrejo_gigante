@@ -32,11 +32,11 @@ func New() *LogrusAdapter {
 }
 
 func (l *LogrusAdapter) Info(args ...interface{}) {
-	l.entry.Info(args...)
+	l.entry.WithField("caller", getCaller(skipFrames)).Info(args...)
 }
 
 func (l *LogrusAdapter) Infof(format string, args ...interface{}) {
-	l.entry.Infof(format, args...)
+	l.entry.WithField("caller", getCaller(skipFrames)).Infof(format, args...)
 }
 
 func (l *LogrusAdapter) Warn(args ...interface{}) {
@@ -67,7 +67,7 @@ func (l *LogrusAdapter) WithFields(fields map[string]interface{}) *LogrusAdapter
 	}
 }
 
-//nolint:unparam
+// nolint
 func getCaller(skip int) string {
 	pc, file, line, ok := runtime.Caller(skip)
 	if !ok {

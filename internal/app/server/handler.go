@@ -15,13 +15,15 @@ import (
 type Handler struct {
 	powService   PowService
 	quoteService QuoteService
+	nonceStore   *NonceStore
 	log          logger.Logger
 }
 
-func NewHandler(powService PowService, quoteService QuoteService, log logger.Logger) *Handler {
+func NewHandler(powService PowService, quoteService QuoteService, nonceStore *NonceStore, log logger.Logger) *Handler {
 	return &Handler{
 		powService:   powService,
 		quoteService: quoteService,
+		nonceStore:   nonceStore,
 		log:          log,
 	}
 }
@@ -34,16 +36,23 @@ func (h *Handler) Handle(conn net.Conn) {
 
 	h.log.Infof("New connection from %s", conn.RemoteAddr().String())
 
-	nonce, err := h.powService.GenerateChallenge()
+	challenge, err := h.powService.GenerateChallenge()
 	if err != nil {
 		h.sendError(conn, "Server error", err)
 
 		return
 	}
 
-	h.log.Infof("Sending challenge to client: %s:%d", nonce.Nonce, nonce.Difficulty)
+	err = h.nonceStore.Save(challenge.Nonce)
+	if err != nil {
+		h.sendError(conn, "Server error", err)
 
-	if err := h.sendChallenge(conn, nonce); err != nil {
+		return
+	}
+
+	h.log.Infof("Sending challenge to client: %s:%d", challenge.Nonce, challenge.Difficulty)
+
+	if err := h.sendChallenge(conn, challenge); err != nil {
 		h.sendError(conn, "Failed to send challenge", err)
 
 		return
@@ -61,9 +70,19 @@ func (h *Handler) Handle(conn net.Conn) {
 		return
 	}
 
-	if err := h.verifySolution(conn, nonce, clientNonce, clientSolution); err != nil {
+	if !h.nonceStore.IsValid(clientNonce) {
+		h.sendError(conn, "Invalid or expired nonce", nil)
+
 		return
 	}
+
+	if err := h.verifySolution(conn, clientNonce, clientSolution); err != nil {
+		h.sendError(conn, "wrong solution", err)
+
+		return
+	}
+
+	h.nonceStore.MarkAsUsed(clientNonce)
 
 	quote := h.quoteService.GetRandomQuote()
 
@@ -94,8 +113,8 @@ func (h *Handler) sendError(conn net.Conn, message string, err error) {
 	}
 }
 
-func (h *Handler) sendChallenge(conn net.Conn, nonce *pow.Challenge) error {
-	_, err := fmt.Fprintf(conn, "%s:%d\n", nonce.Nonce, nonce.Difficulty)
+func (h *Handler) sendChallenge(conn net.Conn, challenge *pow.Challenge) error {
+	_, err := fmt.Fprintf(conn, "%s:%d\n", challenge.Nonce, challenge.Difficulty)
 	if err != nil {
 		return fmt.Errorf("failed to send challenge: %w", err)
 	}
@@ -124,15 +143,8 @@ func (h *Handler) receiveDataFromClient(conn net.Conn) (string, error) {
 
 func (h *Handler) verifySolution(
 	conn net.Conn,
-	nonce *pow.Challenge,
 	clientNonce,
 	clientSolution string) error {
-	if clientNonce != nonce.Nonce {
-		h.sendError(conn, "Invalid nonce", nil)
-
-		return ErrInvalidNonce
-	}
-
 	if !h.powService.VerifySolution(clientNonce, clientSolution) {
 		h.sendError(conn, "Wrong PoW", nil)
 
@@ -145,8 +157,9 @@ func (h *Handler) verifySolution(
 func (h *Handler) sendQuote(conn net.Conn, quote string) error {
 	_, err := fmt.Fprintf(conn, "%s\n", quote)
 	if err != nil {
-		fmt.Errorf("failed to send quote: %w", err)
+		return fmt.Errorf("failed to send quote: %w", err)
 	}
+
 	return nil
 }
 

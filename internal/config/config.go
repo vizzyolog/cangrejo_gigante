@@ -5,14 +5,14 @@ import (
 	"os"
 	"time"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
 	Server struct {
 		Address   string        `yaml:"address"`
 		NonceTTL  time.Duration `yaml:"nonceTtl"`
-		SecretKey string        `yaml:"secretKey"`
+		SecretKey []byte        `yaml:"secretKey"`
 	} `yaml:"server"`
 
 	Client struct {
