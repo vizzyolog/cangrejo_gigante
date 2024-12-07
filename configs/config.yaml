@@ -1,6 +1,8 @@
 server:
   address: "localhost:8080"
   nonceTtl: "30s"
+  maxDataSize: 1024
+  maxConn: 100
 
 client:
   timeout: "10s"

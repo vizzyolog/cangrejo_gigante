@@ -46,8 +46,6 @@ func main() {
 		if err := app.Run(ctx); err != nil {
 			log.Errorf("Client failed: %v", err)
 		}
-
-		close(stopped)
 	}()
 
 	<-stopped

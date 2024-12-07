@@ -10,14 +10,16 @@ import (
 
 type Config struct {
 	Server struct {
-		Address   string        `yaml:"address"`
-		NonceTTL  time.Duration `yaml:"nonceTtl"`
-		SecretKey []byte        `yaml:"secretKey"`
+		Address     string        `yaml:"address"`
+		NonceTTL    time.Duration `yaml:"nonceTtl"`
+		SecretKey   []byte        `yaml:"secretKey"`
+		MaxDataSize int           `yaml:"maxDataSize"`
+		MaxConn     int           `yaml:"maxConn"`
 	} `yaml:"server"`
 
 	Client struct {
 		Timeout time.Duration `yaml:"timeout"`
-	}
+	} `yaml:"client"`
 
 	PoW struct {
 		Difficulty int `yaml:"difficulty"`

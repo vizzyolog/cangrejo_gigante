@@ -33,7 +33,7 @@ func main() {
 	ctx := context.Background()
 
 	nonceStore := server.NewNonceStore(cfg.Server.NonceTTL)
-	handler := server.NewHandler(powService, quoteService, nonceStore, log)
+	handler := server.NewHandler(powService, quoteService, nonceStore, cfg.Server.MaxDataSize, cfg.Server.MaxConn, log)
 	tcpServer := network.NewTCPServer(cfg.Server.Address, handler.Handle)
 
 	srv := server.New(powService, quoteService, tcpServer, log)

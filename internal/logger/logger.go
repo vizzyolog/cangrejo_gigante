@@ -7,7 +7,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const skipFrames = 2
+const skipFramesError = 3
+const skipFramesWarn = 2
+const skipFramesInfo = 1
 
 type LogrusAdapter struct {
 	entry *logrus.Entry
@@ -32,27 +34,27 @@ func New() *LogrusAdapter {
 }
 
 func (l *LogrusAdapter) Info(args ...interface{}) {
-	l.entry.WithField("caller", getCaller(skipFrames)).Info(args...)
+	l.entry.WithField("caller", getCaller(skipFramesInfo)).Info(args...)
 }
 
 func (l *LogrusAdapter) Infof(format string, args ...interface{}) {
-	l.entry.WithField("caller", getCaller(skipFrames)).Infof(format, args...)
+	l.entry.WithField("caller", getCaller(skipFramesInfo)).Infof(format, args...)
 }
 
 func (l *LogrusAdapter) Warn(args ...interface{}) {
-	l.entry.Warn(args...)
+	l.entry.WithField("caller", getCaller(skipFramesWarn)).Warn(args...)
 }
 
 func (l *LogrusAdapter) Warnf(format string, args ...interface{}) {
-	l.entry.Warnf(format, args...)
+	l.entry.WithField("caller", getCaller(skipFramesWarn)).Warnf(format, args...)
 }
 
 func (l *LogrusAdapter) Error(args ...interface{}) {
-	l.entry.WithField("caller", getCaller(skipFrames)).Error(args...)
+	l.entry.WithField("caller", getCaller(skipFramesError)).Error(args...)
 }
 
 func (l *LogrusAdapter) Errorf(format string, args ...interface{}) {
-	l.entry.WithField("caller", getCaller(skipFrames)).Errorf(format, args...)
+	l.entry.WithField("caller", getCaller(skipFramesError)).Errorf(format, args...)
 }
 
 func (l *LogrusAdapter) WithField(key string, value interface{}) *LogrusAdapter {
@@ -67,7 +69,6 @@ func (l *LogrusAdapter) WithFields(fields map[string]interface{}) *LogrusAdapter
 	}
 }
 
-// nolint
 func getCaller(skip int) string {
 	pc, file, line, ok := runtime.Caller(skip)
 	if !ok {
